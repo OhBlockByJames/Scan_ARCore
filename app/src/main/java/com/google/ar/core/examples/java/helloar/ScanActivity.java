@@ -65,6 +65,7 @@ import com.google.ar.core.examples.java.common.samplerender.arcore.BackgroundRen
 import com.google.ar.core.examples.java.common.samplerender.arcore.PlaneRenderer;
 import com.google.ar.core.examples.java.common.samplerender.arcore.SpecularCubemapFilter;
 import com.google.ar.core.exceptions.CameraNotAvailableException;
+import com.google.ar.core.exceptions.CloudAnchorsNotConfiguredException;
 import com.google.ar.core.exceptions.MetadataNotFoundException;
 import com.google.ar.core.exceptions.NotYetAvailableException;
 import com.google.ar.core.exceptions.UnavailableApkTooOldException;
@@ -201,6 +202,22 @@ public class ScanActivity extends AppCompatActivity implements SampleRender.Rend
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        //add
+        try {
+            createSession();
+        } catch (UnavailableSdkTooOldException e) {
+            e.printStackTrace();
+        } catch (UnavailableDeviceNotCompatibleException e) {
+            e.printStackTrace();
+        } catch (UnavailableArcoreNotInstalledException e) {
+            e.printStackTrace();
+        } catch (UnavailableApkTooOldException e) {
+            e.printStackTrace();
+        }
+        //
+
+
         setContentView(R.layout.scan);
         surfaceView = findViewById(R.id.surfacev);
         depthSurfaceView=findViewById(R.id.surfacev);
@@ -239,6 +256,23 @@ public class ScanActivity extends AppCompatActivity implements SampleRender.Rend
                 });
 
     }
+
+    //add
+    public void createSession() throws UnavailableSdkTooOldException, UnavailableDeviceNotCompatibleException, UnavailableArcoreNotInstalledException, UnavailableApkTooOldException {
+        // Create a new ARCore session.
+        session = new Session(this);
+
+        // Create a session config.
+        Config config = new Config(session);
+
+        // Do feature-specific operations here, such as enabling depth or turning on
+        // support for Augmented Faces.
+
+        // Configure the session.
+        session.configure(config);
+    }
+    //
+
     private void passTwoD(){
 
             PointCloudSaving.pointC=pc;
@@ -757,9 +791,18 @@ public class ScanActivity extends AppCompatActivity implements SampleRender.Rend
                     Pose pose=new Pose(xyz,ori);
 
                     Anchor anchor = session.createAnchor(pose);
+                    try{
                     anchor = session.hostCloudAnchor(anchor);
                     String cloudAnchorID = anchor.getCloudAnchorId();
+                    Log.d("Cloud Anchor id: ",anchor.getCloudAnchorId());
                     appAnchorState = AppAnchorState.HOSTING;
+
+                    Log.d("Cloud Anchor state: ",anchor.getCloudAnchorState()+"");}
+                    catch(CloudAnchorsNotConfiguredException e){
+                        Log.d("anchor exception"," failed");
+
+                    }
+
 
 
 
@@ -965,6 +1008,10 @@ public class ScanActivity extends AppCompatActivity implements SampleRender.Rend
     /** Configures the session with feature settings. */
     private void configureSession() {
         Config config = session.getConfig();
+        //add
+        config.setCloudAnchorMode(Config.CloudAnchorMode.ENABLED);
+        config.setFocusMode(Config.FocusMode.AUTO);
+        //
         config.setLightEstimationMode(Config.LightEstimationMode.ENVIRONMENTAL_HDR);
         if (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
             config.setDepthMode(Config.DepthMode.AUTOMATIC);
@@ -977,5 +1024,130 @@ public class ScanActivity extends AppCompatActivity implements SampleRender.Rend
             config.setInstantPlacementMode(InstantPlacementMode.DISABLED);
         }
         session.configure(config);
+    }
+
+    protected Config getSessionConfiguration(Session session) {
+
+        Config config = new Config(session);
+        //getPlaneDiscoveryController().setInstructionView(null);
+        config.setCloudAnchorMode(Config.CloudAnchorMode.ENABLED);
+        config.setFocusMode(Config.FocusMode.AUTO);
+        session.configure(config);
+
+
+        return config;
+    }
+
+    private void toWorldCoordinate(float xcor, float ycor, Frame frame){
+        float x = xcor;
+        float y = ycor;
+        int colSum = viewHeight;
+        int rowSum = viewWidth;
+        ByteBuffer originXBuffer = ByteBuffer.allocateDirect(colSum * rowSum);
+        ByteBuffer originYBuffer = ByteBuffer.allocateDirect(colSum * rowSum);
+        ByteBuffer worldXBuffer = ByteBuffer.allocateDirect(colSum * rowSum);
+        ByteBuffer worldYBuffer = ByteBuffer.allocateDirect(colSum * rowSum);
+        ByteBuffer worldZBuffer = ByteBuffer.allocateDirect(colSum * rowSum);
+        ByteBuffer DepthBuffer = ByteBuffer.allocateDirect(colSum * rowSum);
+        ByteBuffer ColorBuffer = ByteBuffer.allocateDirect(colSum * rowSum);
+        ByteBuffer colorABuffer = ByteBuffer.allocateDirect(colSum * rowSum);
+        ByteBuffer colorRBuffer = ByteBuffer.allocateDirect(colSum * rowSum);
+        ByteBuffer colorGBuffer = ByteBuffer.allocateDirect(colSum * rowSum);
+        ByteBuffer colorBBuffer = ByteBuffer.allocateDirect(colSum * rowSum);
+        ByteBuffer degBuffer = ByteBuffer.allocateDirect(colSum * rowSum);
+        float depthXScale = 1;
+        float depthYScale = 1;
+        int bufferSize = viewHeight * viewWidth * 4;
+        ByteBuffer colorBuffer = ByteBuffer.allocateDirect(bufferSize);
+        ByteBuffer depthBuffer = ByteBuffer.allocateDirect(bufferSize / 2);
+        //用depth方法實驗
+        int byteIndex = 0;
+        int bytePerPixel = 2;
+        int rowStride = 160;
+        int depthWidth = 160;
+        int depthHeight = 120;
+
+        try (Image depthImage = frame.acquireDepthImage()) {
+            depthWidth = depthImage.getWidth();
+            depthHeight = depthImage.getHeight();
+            depthXScale = (float) depthWidth / (float) Math.max(viewWidth, viewHeight);
+            depthYScale = (float) depthHeight / (float) Math.min(viewWidth, viewHeight);
+            Image.Plane plane = depthImage.getPlanes()[0];
+            bytePerPixel = plane.getPixelStride();
+            rowStride = plane.getRowStride();
+            depthBuffer = plane.getBuffer();
+        } catch (NotYetAvailableException e) {
+        }
+
+        int xDepth = (int) (y * depthXScale);
+        int yDepth = (int) ((viewWidth - x) * depthYScale);
+
+
+        int index = (int) ((viewHeight - y) * viewWidth + x) * 4;
+        int b = colorBuffer.get(index) & 0xff;
+        int g = colorBuffer.get(index + 1) & 0xff;
+        int r = colorBuffer.get(index + 2) & 0xff;
+        int a = colorBuffer.get(index + 3) & 0xff;
+
+        int color = 0xff000000 + (r << 16) + (g << 8) + b;
+
+        byteIndex = (int) (xDepth * bytePerPixel + yDepth * rowStride);
+        int depth1 = depthBuffer.get(byteIndex) & 0xff;
+        int depth2 = depthBuffer.get(byteIndex + 1) & 0xff;
+        short depth = (short) (depth1 + (depth2 << 8));
+
+
+        float[] cloudPoint = new float[4];
+
+        float[] viewProjectMatrix = new float[16];
+        Matrix.multiplyMM(viewProjectMatrix, 0, projectionMatrix, 0, viewMatrix, 0);
+
+        float[] xyzw = PointCloudHelper.screenPointToRay(x, y, depth, viewWidth, viewHeight, viewProjectMatrix);
+        float[] xyz = {
+                xyzw[0],
+                xyzw[1],
+                xyzw[2]
+        };
+        float[] ori = {0, 0, 0, 1f};
+        Pose pose = new Pose(xyz, ori);
+
+        Anchor anchor = session.createAnchor(pose);
+        float finalDepthYScale = depthYScale;
+        float finalDepthXScale = depthXScale;
+        int finalDepthWidth = depthWidth;
+        int finalDepthHeight = depthHeight;
+//                worldXBuffer.putFloat(xyz[0]);
+//                worldYBuffer.putFloat(xyz[1]);
+//                worldZBuffer.putFloat(xyz[2]);
+
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                String msg = String.format("width:%d height:%d deg:%f\r\noriginX:%f\toriginY:%f\r\nworldX:%f\tworldY:%f\tworldZ:%f\r\na:%d r:%d g:%d b:%d c:%d\r\ndepth:%d dx:%d dy:%d\r\n\r\n",
+                        viewWidth, viewHeight, deg,
+                        x, y,
+                        xyz[0], xyz[1], xyz[2],
+                        a, r, g, b, color,
+                        depth, xDepth, yDepth);
+                degView.append(msg);
+            }
+        });
+        
+    }
+
+    private void autoScan(Frame frame, Camera camera) throws NotYetAvailableException, InterruptedException {
+        int colSum = viewHeight;
+        int rowSum = viewWidth;
+
+        for (int x=0; x<rowSum; x+=100) {
+            for (int y = 0; y < rowSum; y += 100) {
+//                Thread.sleep(5*1000);
+                try {
+                    toWorldCoordinate(x, y, frame);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 }
