@@ -78,7 +78,6 @@ public class PointCloudHelper {
                 x * 2f / (float) width - 1f,
 
                 ((float) height - y) * 2f / (float) height - 1f,
-//                (float)(y)*2f/(float)height-1f,
                 -1f,
                 1f
         };

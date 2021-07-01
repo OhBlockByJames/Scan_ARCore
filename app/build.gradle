@@ -47,7 +47,6 @@ dependencies {
 
     //add
     implementation 'com.google.guava:guava:27.0.1-android'
-    //implementation platform('com.google.firebase:firebase-bom:26.3.0')
     implementation 'com.google.firebase:firebase-database-ktx'
 }
 
