@@ -25,7 +25,8 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 /** Helper to ask camera permission. */
-public final class CameraPermissionHelper {
+public final class
+CameraPermissionHelper {
   private static final int CAMERA_PERMISSION_CODE = 0;
   private static final String CAMERA_PERMISSION = Manifest.permission.CAMERA;
 

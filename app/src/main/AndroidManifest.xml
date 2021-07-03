@@ -4,10 +4,6 @@
     package="com.google.ar.core.examples.java.helloar">
 
     <uses-permission android:name="android.permission.CAMERA" />
-    <!--
- Limits app visibility in the Google Play Store to ARCore supported devices
-       (https://developers.google.com/ar/discover/supported-devices).
-    -->
     <uses-feature
         android:name="android.hardware.camera.ar"
         android:required="true" />
@@ -42,9 +38,11 @@
             android:exported="true"
             android:screenOrientation="locked"
             android:theme="@style/Theme.AppCompat.NoActionBar" /> <!-- Indicates whether "Google Play Services for AR" (ARCore) is "required" or "optional". -->
+        <meta-data android:name="com.google.ar.core" android:value="required" />
+<!--        account:CloudAnchorManagement -->
         <meta-data
-            android:name="com.google.ar.core"
-            android:value="required" />
+            android:name="com.google.android.ar.API_KEY"
+            android:value="AIzaSyB3jQByrfXjc_CUrEwk8ykOXzx5YHIpoaw"/>
     </application>
 
 </manifest>
